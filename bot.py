@@ -7,12 +7,10 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import pytz
 
-# Token et lien affilié
 TOKEN = os.environ.get("TOKEN")
 AFFILIATE_LINK = "https://polymarket.com?via=yZWX33z"
 BRASILIA_TZ = pytz.timezone("America/Sao_Paulo")
 
-# Base de données SQLite
 def init_db():
     conn = sqlite3.connect("subscribers.db")
     c = conn.cursor()
@@ -58,14 +56,12 @@ def mark_alert_sent(slug):
     conn.commit()
     conn.close()
 
-# Bouton partager
 def get_share_button():
     return InlineKeyboardButton(
         "Compartilhar com amigos",
         url="https://t.me/share/url?url=t.me/FootballPredictionBrazil_bot&text=Bot+gratuito+com+probabilidades+ao+vivo+da+Copa+do+Mundo+2026!"
     )
 
-# API Polymarket
 def get_world_cup_odds():
     try:
         r = requests.get('https://gamma-api.polymarket.com/events/30615', timeout=30)
@@ -167,7 +163,6 @@ def build_morning_message():
     message += "\nFonte: Polymarket - ao vivo"
     return message
 
-# Commandes Telegram
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     add_subscriber(chat_id)
@@ -202,7 +197,7 @@ async def alerta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Alertas desativados. Use /alerta para reativar.")
     else:
         add_subscriber(chat_id)
-        await update.message.reply_text("Alertas ativados! Voce recebera um resumo diario as 9h.")
+        await update.message.reply_text("Alertas ativados! Voce recebera um resumo diario as 9h e alertas antes de cada jogo.")
 
 async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Buscando probabilidades ao vivo...")
@@ -331,7 +326,7 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/brasil - Chances do Brasil ganhar\n"
         "/proxjogo - Proximo jogo do Brasil\n"
         "/odds - Top favoritos\n"
-        "/alerta - Ativar/desativar alertas diarios\n\n"
+        "/alerta - Ativar/desativar alertas\n\n"
         "Todos os dados sao em tempo real via Polymarket.",
         parse_mode="Markdown"
     )
@@ -357,8 +352,7 @@ async def send_morning_alert(context):
         except Exception as e:
             print(f"Erreur envoi {chat_id}: {e}")
 
-            async def check_upcoming_matches(context):
-    """Vérifie les matchs dans 1h et envoie des alertes"""
+async def check_upcoming_matches(context):
     try:
         r = requests.get(
             'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
@@ -366,34 +360,23 @@ async def send_morning_alert(context):
         )
         data = r.json()
         events = data.get('events', [])
-        
         now = datetime.utcnow()
-        
         for event in events:
             slug = event.get('slug', '')
             title = event.get('title', '')
             start_time_str = event.get('startTime', '')
-            
             if not start_time_str or 'fifwc' not in slug or 'more-markets' in slug or 'exact' in slug:
                 continue
-            
-            # Parse l'heure de début
             try:
                 start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ")
             except:
                 continue
-            
-            # Vérifie si le match commence dans 45-75 minutes
             diff_minutes = (start_time - now).total_seconds() / 60
             if not (45 <= diff_minutes <= 75):
                 continue
-            
-            # Vérifie si l'alerte a déjà été envoyée
             alert_slug = f"prematch_{slug}"
             if is_alert_sent(alert_slug):
                 continue
-            
-            # Récupère les cotes
             markets = event.get('markets', [])
             teams = {}
             for market in markets:
@@ -408,11 +391,8 @@ async def send_morning_alert(context):
                             teams[group_title] = prob
                     except:
                         continue
-            
             if not teams:
                 continue
-            
-            # Construit le message
             brazil_playing = "Brazil" in teams
             message = f"JOGO EM 1 HORA!\n\n"
             message += f"🏟 *{title}*\n\n"
@@ -420,20 +400,16 @@ async def send_morning_alert(context):
                 emoji = "✅" if prob == max(teams.values()) else "▪️"
                 br = "🇧🇷 " if team == "Brazil" else ""
                 message += f"{emoji} {br}{team}: *{prob}%*\n"
-            
             if brazil_playing:
                 message += f"\nO Brasil joga agora! Aposte antes do apito!"
             else:
                 message += f"\nNegocie antes do apito inicial!"
-            
-            # Envoie à tous les abonnés
             subscribers = get_all_subscribers()
             keyboard = [
                 [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
                 [get_share_button()]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            
             for chat_id in subscribers:
                 try:
                     await context.bot.send_message(
@@ -444,10 +420,8 @@ async def send_morning_alert(context):
                     )
                 except Exception as e:
                     print(f"Erreur alerte {chat_id}: {e}")
-            
             mark_alert_sent(alert_slug)
             print(f"Alerte envoyee pour {title}")
-            
     except Exception as e:
         print(f"Erreur check_upcoming_matches: {e}")
 
@@ -466,5 +440,5 @@ if __name__ == "__main__":
         time=datetime.strptime("12:00", "%H:%M").time().replace(tzinfo=pytz.utc)
     )
     app.job_queue.run_repeating(check_upcoming_matches, interval=900, first=10)
-    print("Bot demarre avec toutes les fonctionnalites !")
+    print("Bot demarre avec toutes les fonctionnalites!")
     app.run_polling()
