@@ -47,6 +47,7 @@ def get_todays_matches():
             # Filtre : matchs du jour, pas "More Markets", pas esports, slug FIFA
             if (today in slug and 
                 'more-markets' not in slug and 
+                'exact' not in slug and
                 'fifwc' in slug and
                 'vs' in title.lower()):
                 markets = event.get('markets', [])
