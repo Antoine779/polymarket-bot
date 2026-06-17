@@ -16,6 +16,12 @@ def init_db():
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS subscribers (chat_id INTEGER PRIMARY KEY)")
     c.execute("CREATE TABLE IF NOT EXISTS sent_alerts (slug TEXT PRIMARY KEY)")
+    c.execute("""CREATE TABLE IF NOT EXISTS tracking (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        chat_id INTEGER,
+        source TEXT,
+        timestamp TEXT
+    )""")
     conn.commit()
     conn.close()
 
@@ -40,6 +46,24 @@ def get_all_subscribers():
     rows = c.fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+def log_source(chat_id, source):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO tracking (chat_id, source, timestamp) VALUES (?, ?, ?)",
+        (chat_id, source, datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    )
+    conn.commit()
+    conn.close()
+
+def get_tracking_stats():
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("SELECT source, COUNT(*) as total FROM tracking GROUP BY source ORDER BY total DESC")
+    rows = c.fetchall()
+    conn.close()
+    return rows
 
 def is_alert_sent(slug):
     conn = sqlite3.connect("subscribers.db")
@@ -166,6 +190,8 @@ def build_morning_message():
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     add_subscriber(chat_id)
+    source = context.args[0] if context.args else "organic"
+    log_source(chat_id, source)
     teams = get_world_cup_odds()
     brasil_prob = teams.get("Brazil", 6.7)
     keyboard = [
@@ -319,6 +345,16 @@ async def proxjogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
 
+async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    tracking = get_tracking_stats()
+    subscribers = get_all_subscribers()
+    message = "*Estatisticas do bot*\n\n"
+    message += f"Total de assinantes: *{len(subscribers)}*\n\n"
+    message += "*Origem dos usuarios:*\n"
+    for source, total in tracking:
+        message += f"▪ {source}: *{total}*\n"
+    await update.message.reply_text(message, parse_mode="Markdown")
+
 async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "*Como usar este bot:*\n\n"
@@ -326,7 +362,8 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/brasil - Chances do Brasil ganhar\n"
         "/proxjogo - Proximo jogo do Brasil\n"
         "/odds - Top favoritos\n"
-        "/alerta - Ativar/desativar alertas\n\n"
+        "/alerta - Ativar/desativar alertas\n"
+        "/stats - Estatisticas do bot\n\n"
         "Todos os dados sao em tempo real via Polymarket.",
         parse_mode="Markdown"
     )
@@ -434,6 +471,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("matchs", matchs))
     app.add_handler(CommandHandler("proxjogo", proxjogo))
     app.add_handler(CommandHandler("alerta", alerta))
+    app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("ajuda", ajuda))
     app.job_queue.run_daily(
         send_morning_alert,
