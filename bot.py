@@ -44,21 +44,40 @@ def get_todays_matches():
         for event in events:
             slug = event.get('slug', '')
             title = event.get('title', '')
-            if today in slug and 'more-markets' not in slug and 'vs' in title.lower():
+            # Filtre : matchs du jour, pas "More Markets", pas esports, slug FIFA
+            if (today in slug and 
+                'more-markets' not in slug and 
+                'fifwc' in slug and
+                'vs' in title.lower()):
                 markets = event.get('markets', [])
-                match_data = {'title': title, 'slug': slug, 'odds': {}}
+                match_data = {'title': title, 'slug': slug, 'teams': {}}
                 for market in markets:
+                    question = market.get('question', '')
                     prices = market.get('outcomePrices', '[]')
-                    outcomes = market.get('outcomes', '[]')
-                    try:
-                        price_list = j.loads(prices) if isinstance(prices, str) else prices
-                        outcome_list = j.loads(outcomes) if isinstance(outcomes, str) else outcomes
-                        if price_list and outcome_list:
-                            for i, outcome in enumerate(outcome_list):
-                                match_data['odds'][outcome] = round(float(price_list[i]) * 100, 1)
-                    except:
-                        continue
-                if match_data['odds']:
+                    group_title = market.get('groupItemTitle', '')
+                    # On prend uniquement les marchés "qui va gagner"
+                    if group_title and ('win' in question.lower() or 'winner' in question.lower()):
+                        try:
+                            price_list = j.loads(prices) if isinstance(prices, str) else prices
+                            if price_list:
+                                prob = round(float(price_list[0]) * 100, 1)
+                                match_data['teams'][group_title] = prob
+                        except:
+                            continue
+                # Si pas de marchés par équipe, on prend le moneyline
+                if not match_data['teams']:
+                    for market in markets[:1]:
+                        outcomes = market.get('outcomes', '[]')
+                        prices = market.get('outcomePrices', '[]')
+                        try:
+                            outcome_list = j.loads(outcomes) if isinstance(outcomes, str) else outcomes
+                            price_list = j.loads(prices) if isinstance(prices, str) else prices
+                            if outcome_list and price_list:
+                                for i, outcome in enumerate(outcome_list):
+                                    match_data['teams'][outcome] = round(float(price_list[i]) * 100, 1)
+                        except:
+                            continue
+                if match_data['teams']:
                     matches.append(match_data)
         return matches
     except Exception as e:
@@ -123,10 +142,10 @@ async def matchs(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message = "⚽ *Jogos de hoje — Copa do Mundo 2026*\n\n"
         for match in matches[:5]:
             message += f"🏟 *{match['title']}*\n"
-            odds = match['odds']
-            for outcome, prob in odds.items():
-                emoji = "✅" if prob == max(odds.values()) else "▪️"
-                message += f"{emoji} {outcome}: *{prob}%*\n"
+            teams = match['teams']
+            for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
+                emoji = "✅" if prob == max(teams.values()) else "▪️"
+                message += f"{emoji} {team}: *{prob}%*\n"
             message += "\n"
         message += "💡 Fonte: Polymarket — ao vivo"
     else:
