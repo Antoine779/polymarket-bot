@@ -1,16 +1,48 @@
 import os
 import json as j
+import sqlite3
 import requests
 from datetime import datetime
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, JobQueue
+import pytz
 
-# 🔑 Ton token BotFather
+# 🔑 Token et lien affilié
 TOKEN = os.environ.get("TOKEN")
-
-# 🔗 Ton lien affilié Brésil
 AFFILIATE_LINK = "https://polymarket.com?via=yZWX33z"
+BRASILIA_TZ = pytz.timezone("America/Sao_Paulo")
 
+# 📦 Base de données SQLite
+def init_db():
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS subscribers (chat_id INTEGER PRIMARY KEY)")
+    conn.commit()
+    conn.close()
+
+def add_subscriber(chat_id):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO subscribers (chat_id) VALUES (?)", (chat_id,))
+    conn.commit()
+    conn.close()
+
+def remove_subscriber(chat_id):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM subscribers WHERE chat_id = ?", (chat_id,))
+    conn.commit()
+    conn.close()
+
+def get_all_subscribers():
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("SELECT chat_id FROM subscribers")
+    rows = c.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
+# 📊 API Polymarket
 def get_world_cup_odds():
     try:
         r = requests.get('https://gamma-api.polymarket.com/events/30615', timeout=30)
@@ -28,7 +60,7 @@ def get_world_cup_odds():
                     teams[team] = prob
         return teams
     except Exception as e:
-        print(f"Erreur API: {e}")
+        print(f"Erreur API odds: {e}")
         return {}
 
 def get_todays_matches():
@@ -44,9 +76,8 @@ def get_todays_matches():
         for event in events:
             slug = event.get('slug', '')
             title = event.get('title', '')
-            # Filtre : matchs du jour, pas "More Markets", pas esports, slug FIFA
-            if (today in slug and 
-                'more-markets' not in slug and 
+            if (today in slug and
+                'more-markets' not in slug and
                 'exact' not in slug and
                 'fifwc' in slug and
                 'vs' in title.lower()):
@@ -56,7 +87,6 @@ def get_todays_matches():
                     question = market.get('question', '')
                     prices = market.get('outcomePrices', '[]')
                     group_title = market.get('groupItemTitle', '')
-                    # On prend uniquement les marchés "qui va gagner"
                     if group_title and ('win' in question.lower() or 'winner' in question.lower()):
                         try:
                             price_list = j.loads(prices) if isinstance(prices, str) else prices
@@ -65,7 +95,6 @@ def get_todays_matches():
                                 match_data['teams'][group_title] = prob
                         except:
                             continue
-                # Si pas de marchés par équipe, on prend le moneyline
                 if not match_data['teams']:
                     for market in markets[:1]:
                         outcomes = market.get('outcomes', '[]')
@@ -85,93 +114,49 @@ def get_todays_matches():
         print(f"Erreur matchs: {e}")
         return []
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [[InlineKeyboardButton("🚀 Começar a negociar no Polymarket", url=AFFILIATE_LINK)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
-        "⚽ Bem-vindo ao Football Prediction Brazil Bot!\n\n"
-        "🇧🇷 Negocie nos mercados de predição da Copa do Mundo 2026.\n\n"
-        "📊 Comandos disponíveis:\n"
-        "/odds — Ver probabilidades ao vivo\n"
-        "/brasil — Chances do Brasil ganhar\n"
-        "/matchs — Jogos de hoje\n"
-        "/ajuda — Ajuda\n\n"
-        "Clique abaixo para começar 👇",
-        reply_markup=reply_markup
-    )
+def build_morning_message():
+    """Construit le message du matin combiné"""
+    today = datetime.now(BRASILIA_TZ).strftime("%d/%m/%Y")
+    message = f"🌅 *Bom dia! Copa do Mundo — {today}*\n\n"
 
-async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏳ Buscando probabilidades ao vivo...")
-    teams = get_world_cup_odds()
-    sorted_teams = sorted(teams.items(), key=lambda x: x[1], reverse=True)[:8]
-    if sorted_teams:
-        message = "📊 *Probabilidades ao vivo — Copa do Mundo 2026*\n\n"
-        medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣"]
-        for i, (team, prob) in enumerate(sorted_teams):
-            emoji = "🇧🇷 " if team == "Brazil" else ""
-            message += f"{medals[i]} {emoji}{team}: *{prob}%*\n"
-        message += "\n💡 Fonte: Polymarket — ao vivo"
-    else:
-        message = "⚠️ Dados temporariamente indisponíveis. Tente novamente."
-    keyboard = [[InlineKeyboardButton("🚀 Negociar agora", url=AFFILIATE_LINK)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def brasil(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏳ Buscando dados do Brasil...")
-    teams = get_world_cup_odds()
-    prob = teams.get("Brazil")
-    if prob:
-        gain = round(100 / prob * 100, 0)
-        message = (
-            f"🇧🇷 *Brasil na Copa do Mundo 2026*\n\n"
-            f"📊 Probabilidade de ser campeão: *{prob}%*\n\n"
-            f"💰 Se você apostar $100 agora e o Brasil ganhar,\n"
-            f"você recebe *${gain:.0f}*\n\n"
-            f"📈 Dados em tempo real via Polymarket"
-        )
-    else:
-        message = "🇧🇷 *Brasil na Copa do Mundo 2026*\n\n⚠️ Dados temporariamente indisponíveis.\nConsulte diretamente no Polymarket 👇"
-    keyboard = [[InlineKeyboardButton("🚀 Apostar no Brasil agora", url=AFFILIATE_LINK)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def matchs(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏳ Buscando jogos de hoje...")
+    # 1. Matchs du jour
     matches = get_todays_matches()
     if matches:
-        message = "⚽ *Jogos de hoje — Copa do Mundo 2026*\n\n"
-        for match in matches[:5]:
-            message += f"🏟 *{match['title']}*\n"
+        message += "⚽ *Jogos de hoje:*\n"
+        for match in matches[:4]:
+            message += f"\n🏟 *{match['title']}*\n"
             teams = match['teams']
             for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
                 emoji = "✅" if prob == max(teams.values()) else "▪️"
                 message += f"{emoji} {team}: *{prob}%*\n"
-            message += "\n"
-        message += "💡 Fonte: Polymarket — ao vivo"
     else:
-        message = "⚠️ Nenhum jogo encontrado para hoje."
-    keyboard = [[InlineKeyboardButton("🚀 Negociar agora", url=AFFILIATE_LINK)]]
+        message += "⚽ *Nenhum jogo hoje*\n"
+
+    # 2. Cotes des favoris
+    message += "\n🏆 *Top favoritos ao título:*\n"
+    teams = get_world_cup_odds()
+    sorted_teams = sorted(teams.items(), key=lambda x: x[1], reverse=True)[:5]
+    medals = ["🥇", "🥈", "🥉", "4️⃣", "5️⃣"]
+    for i, (team, prob) in enumerate(sorted_teams):
+        emoji = "🇧🇷 " if team == "Brazil" else ""
+        message += f"{medals[i]} {emoji}{team}: *{prob}%*\n"
+
+    # 3. Focus Brésil
+    brasil_prob = teams.get("Brazil")
+    if brasil_prob:
+        gain = round(100 / brasil_prob * 100, 0)
+        message += f"\n🇧🇷 *Brasil hoje:*\n"
+        message += f"📊 Chance de ser campeão: *{brasil_prob}%*\n"
+        message += f"💰 $100 apostados = *${gain:.0f}* se ganhar\n"
+
+    message += "\n💡 Fonte: Polymarket — ao vivo"
+    return message
+
+# 🤖 Commandes Telegram
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    add_subscriber(chat_id)
+    keyboard = [[InlineKeyboardButton("🚀 Começar a negociar no Polymarket", url=AFFILIATE_LINK)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
-
-async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "ℹ️ *Como usar este bot:*\n\n"
-        "/odds — Probabilidades dos favoritos\n"
-        "/brasil — Chances do Brasil ganhar\n"
-        "/matchs — Jogos de hoje\n"
-        "/start — Mensagem de boas-vindas\n\n"
-        "🔎 Todos os dados são em tempo real via Polymarket.",
-        parse_mode="Markdown"
-    )
-
-if __name__ == "__main__":
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("odds", odds))
-    app.add_handler(CommandHandler("brasil", brasil))
-    app.add_handler(CommandHandler("matchs", matchs))
-    app.add_handler(CommandHandler("ajuda", ajuda))
-    print("✅ Bot démarré avec cotes en temps réel !")
-    app.run_polling()
+        "⚽ Bem-vindo ao Football Prediction
