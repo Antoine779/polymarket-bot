@@ -17,6 +17,7 @@ def init_db():
     conn = sqlite3.connect("subscribers.db")
     c = conn.cursor()
     c.execute("CREATE TABLE IF NOT EXISTS subscribers (chat_id INTEGER PRIMARY KEY)")
+    c.execute("CREATE TABLE IF NOT EXISTS sent_alerts (slug TEXT PRIMARY KEY)")
     conn.commit()
     conn.close()
 
@@ -41,6 +42,21 @@ def get_all_subscribers():
     rows = c.fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+def is_alert_sent(slug):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("SELECT slug FROM sent_alerts WHERE slug = ?", (slug,))
+    result = c.fetchone()
+    conn.close()
+    return result is not None
+
+def mark_alert_sent(slug):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("INSERT OR IGNORE INTO sent_alerts (slug) VALUES (?)", (slug,))
+    conn.commit()
+    conn.close()
 
 # Bouton partager
 def get_share_button():
@@ -341,6 +357,100 @@ async def send_morning_alert(context):
         except Exception as e:
             print(f"Erreur envoi {chat_id}: {e}")
 
+            async def check_upcoming_matches(context):
+    """Vérifie les matchs dans 1h et envoie des alertes"""
+    try:
+        r = requests.get(
+            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
+            timeout=30
+        )
+        data = r.json()
+        events = data.get('events', [])
+        
+        now = datetime.utcnow()
+        
+        for event in events:
+            slug = event.get('slug', '')
+            title = event.get('title', '')
+            start_time_str = event.get('startTime', '')
+            
+            if not start_time_str or 'fifwc' not in slug or 'more-markets' in slug or 'exact' in slug:
+                continue
+            
+            # Parse l'heure de début
+            try:
+                start_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ")
+            except:
+                continue
+            
+            # Vérifie si le match commence dans 45-75 minutes
+            diff_minutes = (start_time - now).total_seconds() / 60
+            if not (45 <= diff_minutes <= 75):
+                continue
+            
+            # Vérifie si l'alerte a déjà été envoyée
+            alert_slug = f"prematch_{slug}"
+            if is_alert_sent(alert_slug):
+                continue
+            
+            # Récupère les cotes
+            markets = event.get('markets', [])
+            teams = {}
+            for market in markets:
+                question = market.get('question', '')
+                prices = market.get('outcomePrices', '[]')
+                group_title = market.get('groupItemTitle', '')
+                if group_title and ('win' in question.lower() or 'winner' in question.lower()):
+                    try:
+                        price_list = j.loads(prices) if isinstance(prices, str) else prices
+                        if price_list:
+                            prob = round(float(price_list[0]) * 100, 1)
+                            teams[group_title] = prob
+                    except:
+                        continue
+            
+            if not teams:
+                continue
+            
+            # Construit le message
+            brazil_playing = "Brazil" in teams
+            message = f"JOGO EM 1 HORA!\n\n"
+            message += f"🏟 *{title}*\n\n"
+            for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
+                emoji = "✅" if prob == max(teams.values()) else "▪️"
+                br = "🇧🇷 " if team == "Brazil" else ""
+                message += f"{emoji} {br}{team}: *{prob}%*\n"
+            
+            if brazil_playing:
+                message += f"\nO Brasil joga agora! Aposte antes do apito!"
+            else:
+                message += f"\nNegocie antes do apito inicial!"
+            
+            # Envoie à tous les abonnés
+            subscribers = get_all_subscribers()
+            keyboard = [
+                [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
+                [get_share_button()]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            for chat_id in subscribers:
+                try:
+                    await context.bot.send_message(
+                        chat_id=chat_id,
+                        text=message,
+                        parse_mode="Markdown",
+                        reply_markup=reply_markup
+                    )
+                except Exception as e:
+                    print(f"Erreur alerte {chat_id}: {e}")
+            
+            mark_alert_sent(alert_slug)
+            print(f"Alerte envoyee pour {title}")
+            
+    except Exception as e:
+        print(f"Erreur check_upcoming_matches: {e}")
+
 if __name__ == "__main__":
     init_db()
     app = ApplicationBuilder().token(TOKEN).build()
@@ -355,5 +465,6 @@ if __name__ == "__main__":
         send_morning_alert,
         time=datetime.strptime("12:00", "%H:%M").time().replace(tzinfo=pytz.utc)
     )
+    app.job_queue.run_repeating(check_upcoming_matches, interval=900, first=10)
     print("Bot demarre avec toutes les fonctionnalites !")
     app.run_polling()
