@@ -3,7 +3,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import requests
 
 # 🔑 Ton token BotFather
-TOKEN = "8996255916:AAG1raxOz3lIXrV49QGpS2QM9VkWL0u9PBI"
+import os
+TOKEN = os.environ.get("TOKEN")
 
 # 🔗 Ton lien affilié Brésil
 AFFILIATE_LINK = "https://polymarket.com?via=yZWX33z"
