@@ -14,7 +14,13 @@ BRASILIA_TZ = pytz.timezone("America/Sao_Paulo")
 def init_db():
     conn = sqlite3.connect("subscribers.db")
     c = conn.cursor()
-    c.execute("CREATE TABLE IF NOT EXISTS subscribers (chat_id INTEGER PRIMARY KEY)")
+    c.execute("""CREATE TABLE IF NOT EXISTS subscribers (
+        chat_id INTEGER PRIMARY KEY,
+        first_name TEXT,
+        username TEXT,
+        language TEXT,
+        joined_at TEXT
+    )""")
     c.execute("CREATE TABLE IF NOT EXISTS sent_alerts (slug TEXT PRIMARY KEY)")
     c.execute("""CREATE TABLE IF NOT EXISTS tracking (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,10 +31,13 @@ def init_db():
     conn.commit()
     conn.close()
 
-def add_subscriber(chat_id):
+def add_subscriber(chat_id, first_name="", username="", language=""):
     conn = sqlite3.connect("subscribers.db")
     c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO subscribers (chat_id) VALUES (?)", (chat_id,))
+    c.execute(
+        "INSERT OR IGNORE INTO subscribers (chat_id, first_name, username, language, joined_at) VALUES (?, ?, ?, ?, ?)",
+        (chat_id, first_name, username, language, datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    )
     conn.commit()
     conn.close()
 
@@ -189,7 +198,13 @@ def build_morning_message():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    add_subscriber(chat_id)
+    user = update.effective_user
+    add_subscriber(
+        chat_id,
+        first_name=user.first_name or "",
+        username=user.username or "",
+        language=user.language_code or ""
+    )
     source = context.args[0] if context.args else "organic"
     log_source(chat_id, source)
     teams = get_world_cup_odds()
@@ -222,7 +237,13 @@ async def alerta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         remove_subscriber(chat_id)
         await update.message.reply_text("Alertas desativados. Use /alerta para reativar.")
     else:
-        add_subscriber(chat_id)
+        user = update.effective_user
+        add_subscriber(
+            chat_id,
+            first_name=user.first_name or "",
+            username=user.username or "",
+            language=user.language_code or ""
+        )
         await update.message.reply_text("Alertas ativados! Voce recebera um resumo diario as 9h e alertas antes de cada jogo.")
 
 async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -346,13 +367,23 @@ async def proxjogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
 
 async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    conn = sqlite3.connect("subscribers.db")
+    c = conn.cursor()
+    c.execute("SELECT COUNT(*) FROM subscribers")
+    total = c.fetchone()[0]
+    c.execute("SELECT first_name, username, language, joined_at FROM subscribers ORDER BY joined_at DESC LIMIT 5")
+    recent = c.fetchall()
+    conn.close()
     tracking = get_tracking_stats()
-    subscribers = get_all_subscribers()
     message = "*Estatisticas do bot*\n\n"
-    message += f"Total de assinantes: *{len(subscribers)}*\n\n"
-    message += "*Origem dos usuarios:*\n"
-    for source, total in tracking:
-        message += f"▪ {source}: *{total}*\n"
+    message += f"Total de assinantes: *{total}*\n\n"
+    message += "*Ultimos 5 inscritos:*\n"
+    for first_name, username, language, joined_at in recent:
+        user_str = f"@{username}" if username else first_name or "Unknown"
+        message += f"▪ {user_str} ({language}) — {joined_at[:10]}\n"
+    message += "\n*Origem dos usuarios:*\n"
+    for source, count in tracking:
+        message += f"▪ {source}: *{count}*\n"
     await update.message.reply_text(message, parse_mode="Markdown")
 
 async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
