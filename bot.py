@@ -8,8 +8,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import pytz
 
 TOKEN = os.environ.get("TOKEN")
-print(f"DEBUG TOKEN: '{TOKEN}'")
-print(f"DEBUG LENGTH: {len(TOKEN) if TOKEN else 0}")
+print(f"DEBUG TOKEN: '{TOKEN}'", flush=True)
+print(f"DEBUG LENGTH: {len(TOKEN) if TOKEN else 0}", flush=True)
 AFFILIATE_LINK = "https://polymarket.com?via=yZWX33z"
 BRASILIA_TZ = pytz.timezone("America/Sao_Paulo")
 
