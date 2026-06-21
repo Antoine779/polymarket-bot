@@ -1,7 +1,8 @@
 import sqlite3
 from datetime import datetime
 
-DB_PATH = "subscribers.db"
+import os
+DB_PATH = os.path.join("/app/data", "subscribers.db")
 
 
 def init_db():
