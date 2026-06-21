@@ -22,12 +22,12 @@ def init_db():
         timestamp TEXT
     )""")
     c.execute("""CREATE TABLE IF NOT EXISTS odds_history (
-    match_slug TEXT,
-    team TEXT,
-    probability REAL,
-    updated_at TEXT,
-    PRIMARY KEY (match_slug, team)
-)""")
+        match_slug TEXT,
+        team TEXT,
+        probability REAL,
+        updated_at TEXT,
+        PRIMARY KEY (match_slug, team)
+    )""")
     conn.commit()
     conn.close()
 
@@ -117,7 +117,8 @@ def mark_alert_sent(slug):
     conn.commit()
     conn.close()
 
-    def get_last_odds(match_slug, team):
+
+def get_last_odds(match_slug, team):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute(
