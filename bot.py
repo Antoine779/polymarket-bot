@@ -8,9 +8,6 @@ from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 import pytz
 
 TOKEN = os.environ.get("TOKEN")
-if not TOKEN:
-    raise SystemExit("ERROR: TOKEN environment variable is not set or empty!")
-raise SystemExit(f"DEBUG STOP - TOKEN is: '{TOKEN}' with length {len(TOKEN)}")
 AFFILIATE_LINK = "https://polymarket.com?via=yZWX33z"
 BRASILIA_TZ = pytz.timezone("America/Sao_Paulo")
 
