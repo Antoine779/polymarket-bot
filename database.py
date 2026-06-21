@@ -21,6 +21,13 @@ def init_db():
         source TEXT,
         timestamp TEXT
     )""")
+    c.execute("""CREATE TABLE IF NOT EXISTS odds_history (
+    match_slug TEXT,
+    team TEXT,
+    probability REAL,
+    updated_at TEXT,
+    PRIMARY KEY (match_slug, team)
+)""")
     conn.commit()
     conn.close()
 
@@ -107,5 +114,27 @@ def mark_alert_sent(slug):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("INSERT OR IGNORE INTO sent_alerts (slug) VALUES (?)", (slug,))
+    conn.commit()
+    conn.close()
+
+    def get_last_odds(match_slug, team):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "SELECT probability FROM odds_history WHERE match_slug = ? AND team = ?",
+        (match_slug, team)
+    )
+    result = c.fetchone()
+    conn.close()
+    return result[0] if result else None
+
+
+def update_odds(match_slug, team, probability):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute(
+        "INSERT OR REPLACE INTO odds_history (match_slug, team, probability, updated_at) VALUES (?, ?, ?, ?)",
+        (match_slug, team, probability, datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"))
+    )
     conn.commit()
     conn.close()

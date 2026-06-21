@@ -5,7 +5,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 from config import TOKEN
 from database import init_db
 from handlers import start, odds, brasil, matchs, proxjogo, alerta, stats, ajuda
-from alerts import send_morning_alert, check_upcoming_matches
+from alerts import send_morning_alert, check_upcoming_matches, check_odds_movement
 
 if __name__ == "__main__":
     init_db()
@@ -25,6 +25,7 @@ if __name__ == "__main__":
         time=datetime.strptime("12:00", "%H:%M").time().replace(tzinfo=pytz.utc)
     )
     app.job_queue.run_repeating(check_upcoming_matches, interval=900, first=10)
+    app.job_queue.run_repeating(check_odds_movement, interval=300, first=15)
 
     print("Bot demarre avec toutes les fonctionnalites!")
     app.run_polling()
