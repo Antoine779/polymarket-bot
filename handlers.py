@@ -4,7 +4,7 @@ from telegram.ext import ContextTypes
 from config import AFFILIATE_LINK
 from database import (
     add_subscriber, remove_subscriber, get_all_subscribers,
-    log_source, get_tracking_stats, get_subscriber_count, get_recent_subscribers
+    log_source, get_tracking_stats, get_subscriber_count, get_recent_subscribers, DB_PATH
 )
 from polymarket_api import get_world_cup_odds, get_todays_matches, get_next_brazil_match
 from utils import get_share_button
@@ -181,6 +181,35 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message += f"▪ {source}: *{count}*\n"
     await update.message.reply_text(message, parse_mode="Markdown")
 
+ADMIN_USERNAME = "antoine7799"
+
+
+async def listusers(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.username != ADMIN_USERNAME:
+        await update.message.reply_text("Comando nao disponivel.")
+        return
+
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT first_name, username, language, joined_at FROM subscribers ORDER BY joined_at DESC")
+    rows = c.fetchall()
+    conn.close()
+
+    if not rows:
+        await update.message.reply_text("Nenhum assinante.")
+        return
+
+    message = f"*Lista completa de assinantes ({len(rows)}):*\n\n"
+    for first_name, username, language, joined_at in rows:
+        user_str = f"@{username}" if username else (first_name or "Unknown")
+        message += f"▪ {user_str} ({language}) — {joined_at[:10]}\n"
+
+    if len(message) > 4000:
+        message = message[:4000] + "\n\n... (lista truncada)"
+
+    await update.message.reply_text(message, parse_mode="Markdown")
 
 async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
