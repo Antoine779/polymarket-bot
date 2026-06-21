@@ -25,11 +25,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     teams = get_world_cup_odds()
     brasil_prob = teams.get("Brazil", 6.7)
     keyboard = [
-        [InlineKeyboardButton("Negociar no Polymarket", url=AFFILIATE_LINK)],
+        [InlineKeyboardButton("🚀 Negociar no Polymarket AGORA", url=AFFILIATE_LINK)],
         [get_share_button()]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(
+    sent_message = await update.message.reply_text(
         f"O Brasil tem apenas {brasil_prob}% de chance de ganhar a Copa "
         f"segundo o maior mercado de previsao do mundo.\n\n"
         f"Voce acha que estao subestimados?\n\n"
@@ -41,10 +41,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"/proxjogo - Proximo jogo do Brasil\n"
         f"/odds - Top favoritos\n"
         f"/alerta - Alertas diarios\n\n"
+        f"👉 Toque no botao abaixo para negociar agora no Polymarket!\n\n"
         f"Compartilhe com seus amigos torcedores!",
         reply_markup=reply_markup
     )
 
+    try:
+        await context.bot.pin_chat_message(
+            chat_id=chat_id,
+            message_id=sent_message.message_id,
+            disable_notification=True
+        )
+    except Exception as e:
+        print(f"Erreur pin: {e}")
 
 async def alerta(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
