@@ -117,8 +117,8 @@ async def check_upcoming_matches(context):
     except Exception as e:
         print(f"Erreur check_upcoming_matches: {e}")
 
-        async def check_odds_movement(context):
-    """Détecte les mouvements brusques de cotes (probable but marqué)"""
+
+async def check_odds_movement(context):
     try:
         r = requests.get(
             'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
@@ -126,7 +126,6 @@ async def check_upcoming_matches(context):
         )
         data = r.json()
         events = data.get('events', [])
-        now = datetime.utcnow()
 
         for event in events:
             slug = event.get('slug', '')
@@ -173,8 +172,8 @@ async def check_upcoming_matches(context):
 
                 message = f"{emoji} MOVIMENTO BRUSCO!\n\n"
                 message += f"🏟 *{title}*\n\n"
-                message += f"{team}: {last_prob}% → *{current_prob}%* ({direction} {abs(diff):.1f} pontos)\n\n"
-                message += "Algo aconteceu no jogo! Confira agora 👀"
+                message += f"{team}: {last_prob}% para *{current_prob}%* ({direction} {abs(diff):.1f} pontos)\n\n"
+                message += "Algo aconteceu no jogo! Confira agora"
 
                 subscribers = get_all_subscribers()
                 keyboard = [
