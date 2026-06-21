@@ -260,7 +260,7 @@ async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
             message += f"{medals[i]} {emoji}{team}: *{prob}%*\n"
         message += "\nFonte: Polymarket - ao vivo"
     else:
-        message = "Dados temporariamente indisponiveis. Tente novamente."
+        message = "Dados temporariamente indisponiveis, Tente novamente."
     keyboard = [
         [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
         [get_share_button()]
