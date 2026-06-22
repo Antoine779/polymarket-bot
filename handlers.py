@@ -87,9 +87,11 @@ async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message += "\nFonte: Polymarket - ao vivo"
     else:
         message = "Dados temporariamente indisponiveis. Tente novamente."
+    odds_url = f"https://polymarket.com/event/world-cup-winner?via=yZWX33z"
     keyboard = [
-        [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
+        [InlineKeyboardButton("Negociar agora", url=odds_url)],
         [get_share_button()]
+    ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
@@ -113,9 +115,11 @@ async def brasil(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     else:
         message = "🇧🇷 *Brasil na Copa do Mundo 2026*\n\nDados temporariamente indisponiveis."
+    brasil_url = f"https://polymarket.com/event/world-cup-winner?via=yZWX33z"
     keyboard = [
-        [InlineKeyboardButton("Apostar no Brasil agora", url=AFFILIATE_LINK)],
+        [InlineKeyboardButton("Apostar no Brasil agora", url=brasil_url)],
         [get_share_button()]
+    ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
@@ -137,7 +141,7 @@ async def matchs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         message = "Nenhum jogo encontrado para hoje."
     keyboard = [
-        [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
+        [InlineKeyboardButton("Ver todos os jogos", url=f"https://polymarket.com/sports?via=yZWX33z")],
         [get_share_button()]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
