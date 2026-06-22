@@ -267,3 +267,43 @@ async def backup(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(f"```\n{chunk}\n```", parse_mode="Markdown")
     else:
         await update.message.reply_text(f"```\n{backup_text}\n```", parse_mode="Markdown")
+
+async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.username != ADMIN_USERNAME:
+        await update.message.reply_text("Comando nao disponivel.")
+        return
+
+    if not context.args:
+        await update.message.reply_text(
+            "Usage: /broadcast Votre message ici\n\n"
+            "Exemple: /broadcast Brasil joga amanha! Confira as odds agora."
+        )
+        return
+
+    message = " ".join(context.args)
+    subscribers = get_all_subscribers()
+
+    keyboard = [
+        [InlineKeyboardButton("Ver no Polymarket", url=AFFILIATE_LINK)],
+        [get_share_button()]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    sent = 0
+    failed = 0
+    for chat_id in subscribers:
+        try:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=message,
+                reply_markup=reply_markup
+            )
+            sent += 1
+        except Exception as e:
+            print(f"Erreur broadcast {chat_id}: {e}")
+            failed += 1
+
+    await update.message.reply_text(
+        f"Broadcast termine!\n✅ Envoye: {sent}\n❌ Echec: {failed}"
+    )
