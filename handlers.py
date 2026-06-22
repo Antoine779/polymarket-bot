@@ -223,3 +223,12 @@ async def ajuda(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Todos os dados sao em tempo real via Polymarket.",
         parse_mode="Markdown"
     )
+
+async def daily_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.username != ADMIN_USERNAME:
+        await update.message.reply_text("Comando nao disponivel.")
+        return
+    from polymarket_api import build_morning_message
+    message = build_morning_message()
+    await update.message.reply_text(message, parse_mode="Markdown")

@@ -4,7 +4,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler
 
 from config import TOKEN
 from database import init_db
-from handlers import start, odds, brasil, matchs, proxjogo, alerta, stats, ajuda, listusers
+from handlers import start, odds, brasil, matchs, proxjogo, alerta, stats, ajuda, listusers, daily_alert
 from alerts import send_morning_alert, check_upcoming_matches, check_odds_movement
 
 if __name__ == "__main__":
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     app.add_handler(CommandHandler("stats", stats))
     app.add_handler(CommandHandler("ajuda", ajuda))
     app.add_handler(CommandHandler("listusers", listusers))
+    app.add_handler(CommandHandler("daily_alert", daily_alert))
 
     app.job_queue.run_daily(
         send_morning_alert,
