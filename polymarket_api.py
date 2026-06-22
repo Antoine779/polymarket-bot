@@ -45,18 +45,17 @@ def get_todays_matches():
                 'vs' in title.lower()):
                 markets = event.get('markets', [])
                 start_time_str = event.get('startTime', '')
-match_time = ""
-if start_time_str:
-    try:
-        from datetime import timezone
-        import pytz
-        utc_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-        brasilia = pytz.timezone("America/Sao_Paulo")
-        local_time = utc_time.astimezone(brasilia)
-        match_time = local_time.strftime("%Hh%M")
-    except Exception:
-        pass
-match_data = {'title': title, 'slug': slug, 'teams': {}, 'time': match_time}
+                match_time = ""
+                if start_time_str:
+                    try:
+                        from datetime import timezone
+                        utc_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                        brasilia = pytz.timezone("America/Sao_Paulo")
+                        local_time = utc_time.astimezone(brasilia)
+                        match_time = local_time.strftime("%Hh%M")
+                    except Exception:
+                        pass
+                match_data = {'title': title, 'slug': slug, 'teams': {}, 'time': match_time}
                 for market in markets:
                     question = market.get('question', '')
                     prices = market.get('outcomePrices', '[]')
@@ -87,7 +86,6 @@ match_data = {'title': title, 'slug': slug, 'teams': {}, 'time': match_time}
     except Exception as e:
         print(f"Erreur matchs: {e}")
         return []
-
 
 def get_next_brazil_match():
     try:
