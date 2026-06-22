@@ -102,8 +102,9 @@ async def check_upcoming_matches(context):
                 message += f"\nNegocie antes do apito inicial!"
 
             subscribers = get_all_subscribers()
+            match_url = f"https://polymarket.com/event/{slug}?via=yZWX33z"
             keyboard = [
-                [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
+                [InlineKeyboardButton(f"Negociar — {title}", url=match_url)],
                 [get_share_button()]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
