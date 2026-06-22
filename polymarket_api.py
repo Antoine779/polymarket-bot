@@ -42,6 +42,7 @@ def get_todays_matches():
             if (today in slug and
                 'more-markets' not in slug and
                 'exact' not in slug and
+                'halftime' not in slug and
                 'fifwc' in slug and
                 'vs' in title.lower()):
                 markets = event.get('markets', [])
