@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     app.job_queue.run_daily(
         send_morning_alert,
-        time=datetime.strptime("12:00", "%H:%M").time().replace(tzinfo=pytz.utc)
+        time=datetime.strptime("14:30", "%H:%M").time().replace(tzinfo=pytz.utc)
     )
     app.job_queue.run_repeating(check_upcoming_matches, interval=900, first=10)
     app.job_queue.run_repeating(check_odds_movement, interval=300, first=15)
