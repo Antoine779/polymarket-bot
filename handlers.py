@@ -295,20 +295,13 @@ async def broadcast(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message = " ".join(context.args)
     subscribers = get_all_subscribers()
 
-    keyboard = [
-        [InlineKeyboardButton("Ver no Polymarket", url=AFFILIATE_LINK)],
-        [get_share_button()]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-
     sent = 0
     failed = 0
     for chat_id in subscribers:
         try:
             await context.bot.send_message(
                 chat_id=chat_id,
-                text=message,
-                reply_markup=reply_markup
+                text=message
             )
             sent += 1
         except Exception as e:
