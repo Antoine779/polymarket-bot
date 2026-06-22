@@ -1,6 +1,7 @@
 import json as j
 import requests
-from datetime import datetime
+import pytz
+from datetime import datetime, timezone
 from config import BRASILIA_TZ, WORLD_CUP_EVENT_ID, AFFILIATE_LINK
 
 
@@ -48,7 +49,6 @@ def get_todays_matches():
                 match_time = ""
                 if start_time_str:
                     try:
-                        from datetime import timezone
                         utc_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
                         brasilia = pytz.timezone("America/Sao_Paulo")
                         local_time = utc_time.astimezone(brasilia)
@@ -86,6 +86,7 @@ def get_todays_matches():
     except Exception as e:
         print(f"Erreur matchs: {e}")
         return []
+
 
 def get_next_brazil_match():
     try:
@@ -129,7 +130,7 @@ def build_morning_message():
         message += "Jogos de hoje:\n"
         for match in matches[:4]:
             time_str = f" — {match['time']}" if match.get('time') else ""
-message += f"\n🏟 *{match['title']}*{time_str}\n"
+            message += f"\n🏟 *{match['title']}*{time_str}\n"
             teams = match['teams']
             for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
                 emoji = "✅" if prob == max(teams.values()) else "▪️"
