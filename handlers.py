@@ -92,7 +92,6 @@ async def odds(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("Negociar agora", url=odds_url)],
         [get_share_button()]
     ]
-    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
 
@@ -119,7 +118,6 @@ async def brasil(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("Apostar no Brasil agora", url=brasil_url)],
         [get_share_button()]
-    ]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
