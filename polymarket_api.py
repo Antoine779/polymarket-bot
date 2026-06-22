@@ -44,7 +44,19 @@ def get_todays_matches():
                 'fifwc' in slug and
                 'vs' in title.lower()):
                 markets = event.get('markets', [])
-                match_data = {'title': title, 'slug': slug, 'teams': {}}
+                start_time_str = event.get('startTime', '')
+match_time = ""
+if start_time_str:
+    try:
+        from datetime import timezone
+        import pytz
+        utc_time = datetime.strptime(start_time_str, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+        brasilia = pytz.timezone("America/Sao_Paulo")
+        local_time = utc_time.astimezone(brasilia)
+        match_time = local_time.strftime("%Hh%M")
+    except Exception:
+        pass
+match_data = {'title': title, 'slug': slug, 'teams': {}, 'time': match_time}
                 for market in markets:
                     question = market.get('question', '')
                     prices = market.get('outcomePrices', '[]')
@@ -118,7 +130,8 @@ def build_morning_message():
     if matches:
         message += "Jogos de hoje:\n"
         for match in matches[:4]:
-            message += f"\n🏟 *{match['title']}*\n"
+            time_str = f" — {match['time']}" if match.get('time') else ""
+message += f"\n🏟 *{match['title']}*{time_str}\n"
             teams = match['teams']
             for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
                 emoji = "✅" if prob == max(teams.values()) else "▪️"
