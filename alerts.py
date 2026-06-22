@@ -25,7 +25,8 @@ async def send_morning_alert(context):
                 chat_id=chat_id,
                 text=message,
                 parse_mode="Markdown",
-                reply_markup=reply_markup
+                reply_markup=reply_markup,
+                disable_web_page_preview=True
             )
         except Exception as e:
             print(f"Erreur envoi {chat_id}: {e}")
@@ -34,7 +35,7 @@ async def send_morning_alert(context):
 async def check_upcoming_matches(context):
     try:
         r = requests.get(
-            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
+            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=100&order=volume24hr&ascending=false',
             timeout=30
         )
         data = r.json()
@@ -121,7 +122,7 @@ async def check_upcoming_matches(context):
 async def check_odds_movement(context):
     try:
         r = requests.get(
-            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
+            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=100&order=volume24hr&ascending=false',
             timeout=30
         )
         data = r.json()

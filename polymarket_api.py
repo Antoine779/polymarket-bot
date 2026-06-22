@@ -29,7 +29,7 @@ def get_todays_matches():
     try:
         today = datetime.utcnow().strftime("%Y-%m-%d")
         r = requests.get(
-            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=20&order=volume24hr&ascending=false',
+            'https://gamma-api.polymarket.com/events/keyset?title_search=vs&limit=100&order=volume24hr&ascending=false',
             timeout=30
         )
         data = r.json()

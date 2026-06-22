@@ -231,4 +231,4 @@ async def daily_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     from polymarket_api import build_morning_message
     message = build_morning_message()
-    await update.message.reply_text(message, parse_mode="Markdown")
+    await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
