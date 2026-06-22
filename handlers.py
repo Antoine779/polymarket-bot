@@ -179,7 +179,7 @@ async def stats(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message += "\n*Origem dos usuarios:*\n"
     for source, count in tracking:
         message += f"▪ {source}: *{count}*\n"
-    await update.message.reply_text(message, parse_mode="Markdown")
+    await update.message.reply_text(message)
 
 ADMIN_USERNAME = "antoine7799"
 
