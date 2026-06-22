@@ -120,7 +120,7 @@ async def brasil(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [get_share_button()]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
+    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup, disable_web_page_preview=True)
 
 
 async def matchs(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -129,22 +129,31 @@ async def matchs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if matches:
         message = "*Jogos de hoje - Copa do Mundo 2026*\n\n"
         for match in matches[:5]:
-            message += f"🏟 *{match['title']}*\n"
+            time_str = f" — {match['time']}" if match.get('time') else ""
+            message += f"🏟 *{match['title']}*{time_str}\n"
             teams = match['teams']
             for team, prob in sorted(teams.items(), key=lambda x: x[1], reverse=True):
                 emoji = "✅" if prob == max(teams.values()) else "▪️"
                 message += f"{emoji} {team}: *{prob}%*\n"
             message += "\n"
-        message += "Fonte: Polymarket - ao vivo"
+        message += f"Fonte: [Polymarket](https://polymarket.com/sports?via=yZWX33z) - ao vivo"
     else:
         message = "Nenhum jogo encontrado para hoje."
-    keyboard = [
-        [InlineKeyboardButton("Ver todos os jogos", url=f"https://polymarket.com/sports?via=yZWX33z")],
-        [get_share_button()]
-    ]
+    keyboard = []
+    for match in matches[:5]:
+        match_url = f"https://polymarket.com/event/{match['slug']}?via=yZWX33z"
+        keyboard.append([InlineKeyboardButton(
+            f"Negociar — {match['title']}",
+            url=match_url
+        )])
+    keyboard.append([get_share_button()])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(message, parse_mode="Markdown", reply_markup=reply_markup)
-
+    await update.message.reply_text(
+        message,
+        parse_mode="Markdown",
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
+    )
 
 async def proxjogo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Buscando proximo jogo do Brasil...")
