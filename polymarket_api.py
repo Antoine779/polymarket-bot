@@ -1,7 +1,7 @@
 import json as j
 import requests
 from datetime import datetime
-from config import BRASILIA_TZ, WORLD_CUP_EVENT_ID
+from config import BRASILIA_TZ, WORLD_CUP_EVENT_ID, AFFILIATE_LINK
 
 
 def get_world_cup_odds():
@@ -141,5 +141,5 @@ def build_morning_message():
         message += f"Chance de ser campeao: *{brasil_prob}%*\n"
         message += f"$100 apostados = *${gain:.0f}* se ganhar\n"
 
-    message += "\nFonte: Polymarket - ao vivo"
+    message += f"\nFonte: [Polymarket]({AFFILIATE_LINK}) - ao vivo"
     return message
