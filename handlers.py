@@ -229,6 +229,22 @@ async def daily_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user.username != ADMIN_USERNAME:
         await update.message.reply_text("Comando nao disponivel.")
         return
-    from polymarket_api import build_morning_message
-    message = build_morning_message()
-    await update.message.reply_text(message, parse_mode="Markdown", disable_web_page_preview=True)
+    from polymarket_api import build_morning_message, get_todays_matches
+    message, matches = build_morning_message()
+
+    keyboard = []
+    for match in matches[:4]:
+        match_url = f"https://polymarket.com/event/{match['slug']}?via=yZWX33z"
+        keyboard.append([InlineKeyboardButton(
+            f"Negociar — {match['title']}",
+            url=match_url
+        )])
+    keyboard.append([get_share_button()])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    await update.message.reply_text(
+        message,
+        parse_mode="Markdown",
+        reply_markup=reply_markup,
+        disable_web_page_preview=True
+    )

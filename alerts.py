@@ -13,12 +13,19 @@ async def send_morning_alert(context):
     subscribers = get_all_subscribers()
     if not subscribers:
         return
-    message = build_morning_message()
-    keyboard = [
-        [InlineKeyboardButton("Negociar agora", url=AFFILIATE_LINK)],
-        [get_share_button()]
-    ]
+    message, matches = build_morning_message()
+
+    # Boutons : un par match + bouton partager
+    keyboard = []
+    for match in matches[:4]:
+        match_url = f"https://polymarket.com/event/{match['slug']}?via=yZWX33z"
+        keyboard.append([InlineKeyboardButton(
+            f"Negociar — {match['title']}",
+            url=match_url
+        )])
+    keyboard.append([get_share_button()])
     reply_markup = InlineKeyboardMarkup(keyboard)
+
     for chat_id in subscribers:
         try:
             await context.bot.send_message(

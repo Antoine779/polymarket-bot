@@ -154,4 +154,4 @@ def build_morning_message():
         message += f"$100 apostados = *${gain:.0f}* se ganhar\n"
 
     message += f"\nFonte: [Polymarket]({AFFILIATE_LINK}) - ao vivo"
-    return message
+    return message, matches
