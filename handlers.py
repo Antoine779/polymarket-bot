@@ -248,3 +248,22 @@ async def daily_alert(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=reply_markup,
         disable_web_page_preview=True
     )
+async def backup(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.username != ADMIN_USERNAME:
+        await update.message.reply_text("Comando nao disponivel.")
+        return
+    
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    lines = list(conn.iterdump())
+    conn.close()
+    
+    backup_text = "\n".join(lines)
+    
+    if len(backup_text) > 4000:
+        chunks = [backup_text[i:i+4000] for i in range(0, len(backup_text), 4000)]
+        for chunk in chunks:
+            await update.message.reply_text(f"```\n{chunk}\n```", parse_mode="Markdown")
+    else:
+        await update.message.reply_text(f"```\n{backup_text}\n```", parse_mode="Markdown")
